@@ -1,23 +1,21 @@
 # NYC Department of Homeless Services Daily Shelter Census Analysis
 
-## Introduction
+Perpetua Senatus
 
-Homelessness remains one of the most pressing social and administrative challenges facing New York City, impacting thousands of individuals and families daily. My interest in this topic stems from my daily commute; as someone who takes the train to come to campus, I am frequently confronted with the human reality of this crisis. I often see people sleeping on the trains and encounter families with children asking for help. These experiences have left me constantly questioning why these individuals are not provided a safe place to say for their well-being, are the shelters simply full, or are there other barriers to entry?. To better understand these questions, I chose to study the **NYC Department of Homeless Services(DHS) Daily Report** because it provides a transparent, high-frequency look at the scale of the city's shelter system and the specific demographics it serves. This project aims to perform detective work through exploratory data analysis to uncover trends in shelter residency. Specially, I am interested in studying how the total population has fluctuated over the last few years, whether there are seasonal patterns in census counts, and which subgroups are most responsible for shifts in the overall population.
+## Introduction
+Homelessness remains one of the most pressing social and administrative challenges facing New York City, impacting thousands of individuals and families daily. My interest in this topic stems from my daily commute; as someone who takes the train to come to campus, I am frequently confronted with the human reality of this crisis. I often see people sleeping on the trains and encounter families with children asking for help. These experiences have left me constantly questioning why these individuals are not provided a safe place to stay for their well-being, are the shelters simply full, or are there other barriers to entry?. To better understand these questions, I chose to study the **NYC Department of Homeless Services(DHS) Daily Report** because it provides a transparent, high-frequency look at the scale of the city's shelter system and the specific demographics it serves. This project aims to perform detective work through exploratory data analysis to uncover trends in shelter residency. Specifically, I am interested in studying how the total population has fluctuated over the last few years, whether there are seasonal patterns in census counts, and which subgroups are most responsible for shifts in the overall population.
 
 ## Data
 
 ### Description
-
-The data is provided by the **New York City Department of Homeless Services(DHS)** and represents an official daily census of families and individuals residing within the city's shelter system. The dataset is **updated daily** on the NYC Open Data portal. As of the latest records used in this analysis, the dataset contains **13 columns** and approximately 1**888 rows,** with each rows representing one Date of Census. The key variablesinclude the **Total Individuals in Shelter** (sum of all adults and children in the system) **and Demographic Breakdowns** (Single Adult Men/Women and Families with Children).
+The data is provided by the **New York City Department of Homeless Services(DHS)** and represents an official daily census of families and individuals residing within the city's shelter system. The dataset is **updated daily** on the NYC Open Data portal. As of the latest records used in this analysis, the dataset contains **13 columns** and approximately 1**888 rows,** with each row representing one Date of Census. The key variables include the **Total Individuals in Shelter** (sum of all adults and children in the system) **and Demographic Breakdowns** (Single Adult Men/Women and Families with Children).
 
 **Dataset Link:** [DHS Daily Report- NYC Open Data](https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m/about_data)[ ](https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m/about_data)
 
 ### Missing value analysis
-
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 library(tidyverse)
 library(ggplot2)
 df <- read_csv("https://data.cityofnewyork.us/resource/k46n-sa2m.csv?$limit=5000")
@@ -28,7 +26,7 @@ nrow(df)
 ```
 
 ```{r}
-#| echo: false
+#| warning: false
 #| message: false
 # convert date 
 library(tidyverse)
@@ -40,20 +38,16 @@ head(df$date_of_census)
 ```
 
 **This long list of 0 confirms that all 13 variables contain zero missing values:**
-
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 colSums(is.na(df)) |> sort (decreasing = TRUE)
 ```
 
 **Graph 1 :** This map confirms that our data is **100% complete** across all 13 variables. It shows that the DHS has a very reliable and consistent daily reporting process:
-
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 library(naniar)
 vis_miss(df) +
   labs(title="Global Overview of Data Completeness") +
@@ -61,29 +55,25 @@ vis_miss(df) +
 ```
 
 **Graph 2:** Checking each variable one by one further confirms that every key metric has **zero missing values.** We can trust that the totals are not being skewed by one group being under-reported:
-
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 gg_miss_var(df) +
   labs(title ="Missing values by variable",
        y ="Number of missing values") +
        ylim(0,10)
 ```
 
-**Summary of patterns:** The missing value analysis reveals that the NYC DHS Shelter dataset exhibits a complete case structure, with zero missing values identifies across 1000 observations analyzed. This is likely due to the data being an official daily census where each rows is an aggregated total of the entire shelter system.
+**Summary of patterns:** The missing value analysis reveals that the NYC DHS Shelter dataset exhibits a complete case structure, with zero missing values identified across 1000 observations analyzed. This is likely due to the data being an official daily census where each row is an aggregated total of the entire shelter system.
 
 ## Results
 
 ### Question 1: How has the total NYC shelter population evolved between  2021? Does the growth trajectory suggest a system reaching its capacity?
 
-#### 1.1 The Impact of Economic Policy and Housing Costs
-
+#### The Impact of Economic Policy and Housing Costs
 This graph tracks the effectiveness of 'Right to Shelter' laws and the impact of rising NYC rent prices. A steady increase suggests that housing affordability policies may not be keeping pace with demand:
-
 ```{r}
-#| echo: false
+#| warning: false
 #| message: false
 library(lubridate)
 
@@ -96,17 +86,15 @@ ggplot(df, aes(x = date_of_census , y = total_individuals_in_shelter))+
        theme_bw()
 
 ```
+**Story:** After a period of relative stability in 2021, there is a massive surge starting in late 2022 that continues into 2026, with the population nearly doubling \~ from **45,000 to over 80,000** individuals. This rapid growth suggests that the pace of people entering the system significantly exceeds the city's ability to transition them into permanent housing.
 
-**Story:** After a period of relative stability in 2021, there is a massive surge starting in late 2022 that continues into 2026, with the population nearly doubling \~ from **45,000 to over 80,000** individuals. This rapid growth suggest that the pace of people entering the system significantly exceeds the city's ability to transition them into permanent housing.
-
-**1.2 Ridgeline Distribution by Year**
+**Ridgeline Distribution by Year**
 
 This graph tracks the distribution of the daily census by year. We can see the center of gravity of the shelter system moving toward higher numbers as the crisis evolved:
 
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 
 library(ggridges)
 df |>
@@ -121,18 +109,15 @@ df |>
 
 ```
 
-**Story:** This ridgeline plot reveals that in 2021, the system consistently stayed around 45000 people. By 2024 and 2025, the peaks have flattened and migrated significantly to the right, showing that the high population has become the new normal. Basically , the density curves shifting right show the system reaching new baselines.
+**Story:** This ridgeline plot reveals that in 2021, the system consistently stayed around 45000 people. By 2024 and 2025, the peaks have flattened and migrated significantly to the right, showing that the high population has become the new normal. Basically, the density curves shifting to the right show the system reaching new baselines.
 
 ### Question 2: What is the ratio of single adults vs. families with children over time? **How has the composition of the shelter system shifted over time?**
 
-**2.1 Demographic Shifts : Families with Children vs. Single Adults**
-
+**Demographic Shifts: Families with Children vs. Single Adults**
 This graph tracks
-
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 df_long <- df |>
   select(date_of_census, total_single_adults_in_shelter, total_individuals_in_families_with_children_in_shelter_) |>
   rename("Single Adults" = total_single_adults_in_shelter,
@@ -147,17 +132,13 @@ ggplot(df_long, aes(x = date_of_census, y = Count, color = Group)) +
   scale_color_brewer(palette = "Set1") +
   theme_minimal()
 ```
-
 **Story:** This multiline plot reveals that the **family population** has grown at a much faster rate than the single adult population since **2023.** This directly aligns with my personal observations of families with children on the trains.
 
-**2.2 Detailed Family Composition**
-
+**Detailed Family Composition**
 This graph tracks the specific breakdown of people in family shelters (Adults vs. Children):
-
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 df_2025 <- df |>
   filter(year(date_of_census) == 2025) |>
   select(date_of_census, adults_in_families_with_children_in_shelter, children_in_families_with_children_in_shelter) |>
@@ -176,7 +157,6 @@ ggplot(df_2025, aes(x = date_of_census, y = Count, fill = Subgroup)) +
 
 **Finding:** This stacked area chart shows that
 
-**2.3**
 
 ```{r}
 
@@ -184,16 +164,14 @@ ggplot(df_2025, aes(x = date_of_census, y = Count, fill = Subgroup)) +
 
 ### Question 3: Does the shelter population peak during winter months? 
 
-#### **3.1 Seasonal Trends and Public Health** 
+#### **Seasonal Trends and Public Health** 
 
 ####  **Seasonality and the code blue effect** 
 
-This graph investigates if the people I see sleeping on trains are successfully transitioned into shelters during extreme cold. So, it evaluates the city's emergency winter response**(Code Blue).** If the population spikes significantly every January, it shows how weather-related public health policies drive DHS operations.
-
+This graph investigates whether the people I see sleeping on trains are successfully transitioned into shelters during extreme cold. So, it evaluates the city's emergency winter response**(Code Blue).** If the population spikes significantly every January, it shows how weather-related public health policies drive DHS operations.
 ```{r}
 #| message: false
 #| warning: false
-#| echo: false
 library(lubridate)
 df_monthly <- df |>
   mutate(Month = month(date_of_census, label = TRUE))
@@ -206,14 +184,14 @@ ggplot(df_monthly, aes(x = Month, y = total_individuals_in_shelter, fill = Month
     y = "Total Individuals") +
    theme_minimal()
 ```
+**Story:** By using boxplots to look for seasonal patterns, we see that the overall growth trend is so powerful that it has largely erased traditional seasonality. While winter months typically see spikes, the medians for every month are now significantly higher than in previous years.
 
-**Story:** By using boxplots to look for seasonal patterns, we see that the overall growth trend is so powerful it has largely erased traditional seasonality. While winter months typically see spikes, the medians for every month are now significantly higher the previous years.
+** Short summary of the most revealing findings of my analysis:**
 
-S**hort summary of the most revealing findings of my analysis:**
-
-Take extra care to clean up your graphs, ensuring that best practices for presentation are followed, as described in the audience ready style section below.
+Take extra care to clean up your graphs, ensuring that best practices for presentation are followed, as described in the audience-ready style section below.
 
 Your project should contain 5-10 graphs. Quality is rewarded over quantity.
+
 
 ## Conclusion
 
