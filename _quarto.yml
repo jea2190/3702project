@@ -10,7 +10,9 @@ book:
   repo-actions: [source, edit, issue]
   chapters:
     - index.qmd
+    - nyc_shelter_census.qmd
     - instructions.qmd
+    
 
   
 format:
