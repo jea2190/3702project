@@ -150,13 +150,9 @@ ggplot(gap_plot, aes(x = Borough, y = gap)) +
     x = "Borough"
   )
 ```
-<<<<<<< HEAD
-From this graph, we can see that the Bronx and Brooklyn have a higher share of the affordable projects in comparison to their share of the total population. 
-=======
 From this graph, we can see that the Bronx and Brooklyn have a higher share of the affordable projects in comparison to their share of the total population. According to the NYC True Cost of Living report, 75% of residents in the Bronx do not meet their true cost of living. Approximately 65% of Brooklyn and Queens residents don't meet their true cost of living and 55% and 48% for Manhattan and Staten Island respectively. This would explain why the Bronx and Brooklyn have a higher share of affordable housing projects in comparison to their share of population since more residents don't meet their true cost of living. Queens seems to have a large share of the population but not a very large share of the affordable housing projects considering a similar proportion of residents to Brooklyn don't meet the true cost of living. It could be that since the second plan is still in progress, that the city will be turning to Queens to start more projects. 
 
 Source: https://www.nyc.gov/assets/equity/downloads/pdf/2026%20NYC%20TCOL%20Measure_4%206%2026.pdf#:~:text=Geographic%20Disparities%20Across%20the%20Five,but%20also%20the%20least%20resources.
->>>>>>> 40a855b (comments)
 
 
 ### Question 2: Impact of Target Income Level on Project Location
