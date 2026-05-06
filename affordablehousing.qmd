@@ -29,11 +29,21 @@ From this graph, we can see that a majority of the columns with missing data con
 missing <- df |> 
   filter(is.na(`Building ID`)) |> 
   rename(`Rental Units` = `Counted Rental Units`, `Homeownership Units` = `Counted Homeownership Units`)|> 
-  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Counted Units") |> 
-  aggregate(`Counted Units` ~ Type, FUN = sum)
+  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Missing Counted Units") |> 
+  aggregate(`Missing Counted Units` ~ Type, FUN = sum)
+```
 
-ggplot(missing, aes(x = Type, y = `Counted Units`)) + 
-  geom_col() + 
+```{r}
+confidential <- df |> 
+    filter(`Project Name` == "CONFIDENTIAL") |> 
+  rename(`Rental Units` = `Counted Rental Units`, `Homeownership Units` = `Counted Homeownership Units`)|> 
+  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Confidential Counted Units") |> 
+  aggregate(`Confidential Counted Units` ~ Type, FUN = sum)
+
+con_mis <- left_join(confidential, missing) |> pivot_longer(cols = c(`Missing Counted Units`, `Confidential Counted Units`), names_to = "Missing vs. Confidential", values_to = "Counted Units")
+
+ggplot(con_mis, aes(x = Type, y = `Counted Units`, fill = `Missing vs. Confidential`)) + 
+  geom_col(position = "dodge") + 
   labs(
     title = "Number of Units with Missing Data by Unit Type",
     y = "Number of Units",
@@ -41,8 +51,7 @@ ggplot(missing, aes(x = Type, y = `Counted Units`)) +
   )
 
 ```
-
-From this graph we can see that a majority of the projects with missing data are projects that involve homeownership units. This also helps us to verify the statement provided in the data set introduction that some information was redacted because it was related to homeownership. 
+From this graph we can see that a majority of the projects with missing data are projects that involve homeownership units. This also helps us to verify the statement provided in the data set introduction that some information was redacted because it was related to homeownership. We can also confirm that all units with no building ID are confidential projects and not a lack of data upkeep. 
 ```{r}
 missing_rental <- df |> 
   filter(is.na(`Building ID`),`Counted Rental Units` > 0 ) |> 
@@ -141,12 +150,16 @@ ggplot(gap_plot, aes(x = Borough, y = gap)) +
     x = "Borough"
   )
 ```
+<<<<<<< HEAD
 From this graph, we can see that the Bronx and Brooklyn have a higher share of the affordable projects in comparison to their share of the total population. 
+=======
+From this graph, we can see that the Bronx and Brooklyn have a higher share of the affordable projects in comparison to their share of the total population. According to the NYC True Cost of Living report, 75% of residents in the Bronx do not meet their true cost of living. Approximately 65% of Brooklyn and Queens residents don't meet their true cost of living and 55% and 48% for Manhattan and Staten Island respectively. This would explain why the Bronx and Brooklyn have a higher share of affordable housing projects in comparison to their share of population since more residents don't meet their true cost of living. Queens seems to have a large share of the population but not a very large share of the affordable housing projects considering a similar proportion of residents to Brooklyn don't meet the true cost of living. It could be that since the second plan is still in progress, that the city will be turning to Queens to start more projects. 
+
+Source: https://www.nyc.gov/assets/equity/downloads/pdf/2026%20NYC%20TCOL%20Measure_4%206%2026.pdf#:~:text=Geographic%20Disparities%20Across%20the%20Five,but%20also%20the%20least%20resources.
+>>>>>>> 40a855b (comments)
 
 
-
-
-### Question 2
+### Question 2: Impact of Target Income Level on Project Location
 ```{r}
 cols <- c("Extremely Low Income Units",
           "Very Low Income Units",
@@ -174,9 +187,11 @@ ggplot() +
   facet_wrap(~ `income level`)
 
 ```
+WE can see on the graph that there are generally more Low Income Units and Middle Income units. All levels of income have concentrations of projects in the Bronx and also in Northeast Brooklyn. This tells us that the location of each project was less determined by the target income level and rather by neighborhood and providing access to affordable housing for all of the different income levels. 
 
-### Question 3
-does lower income mean more bedrooms?
+One issue I did run into while creating this graph was that each project had units for multiple income levels. To create this graph, I decided to figure out what income level the majority of the units in the building were for and use that income level as the target income level associated with the building. Then I was able to create this graph. 
+
+### Question 3: New Projects Over Time
 ```{r}
 yearly_borough <- df |>
   mutate(`Project Start Date` = as.Date(`Project Start Date`, "%m/%d/%Y"),
@@ -191,6 +206,7 @@ ggplot(yearly_borough, aes(x = Year, y = total_units)) +
 
 
 ```
-
+From this graph we can see that there was a spike in projects in the Bronx in 2020. We can also see that at the beginning of the Housing New York plan, there was primarily a focus on the Bronx, Brooklyn, and Manhattan. Eventually the focus shifted away from Brooklyn and Manhattan to Queens where there was an increase in projects started over time. Staten Island relatively has very few projects but a majority of projects in Staten Island were started in 2025. We can also see that each borough has a spike with Brooklyn in 2018, Manhattan in 2019, the Bronx in 2020, and Queens in 2021. This could represent a shift in the focus on the Housing New York plan where instead of dividing their attention across neighborhoods, it was simpler to work on a lot of projects within a certain area all at the same time. 
 
 ## Conclusion
+Through this project, I was able to better understand when and where the city decides to begin projects focusing on providing more affordable housing options to different people in different financial situations. I was able to visualize the distribution of affordable housing projects by borough and better understand the difference between where affordable housing is needed and where it is being provided. I hope to look more into this data in the future seeing more detail about the individual neighborhoods, seeing if there is a higher concentration of new projects in boroughs with higher rates of poverty and if that is where the city first started implementing these affordable housing projects. From the information I gathered through this data, I hope to see more affordable housing options in Queens due to the large proportion of residents in Queens and the lack of projects in comparison especially because a large proprotion of people don't meet the true cost of living. 
