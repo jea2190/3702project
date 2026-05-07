@@ -176,14 +176,6 @@ summary(model)
 ```
 
 
-The graph presents the racial distribution of arrests across the five boroughs as proportions. On the x-axis, the names of the boroughs are labeled by their abbreviations, with Brooklyn represented by "K." After conducting a chi-sq test of independence, the p-value was \< 0.05, indicating statistical significance. There is statistically significant evidence that racial distribution of arrests is not independent of borough. In other words, racial distribution of arrests differs across the five boroughs.
-
-```{r}
-race_boro <- table(arrests$perp_race, arrests$arrest_boro)
-
-chisq.test(race_boro)
-```
-
 
 ```{r}
 shootings <- read_csv("https://data.cityofnewyork.us/resource/5ucz-vwe8.csv?$limit=25000", na = c("(null)", ""))
@@ -256,12 +248,14 @@ race_p75 <- p75 |>
   count(perp_race) |>
   mutate(prop = n / sum(n))
 
-ggplot(race_p75, aes(y = perp_race, x = prop)) +
+ggplot(race_p75, aes(y = fct_reorder(perp_race, prop), x = prop)) +
   geom_col(fill = "darkblue") +
   theme_minimal() +
   labs(title = "Racial distribution of arrests in Precinct 75 (Brooklyn)")
 
 ```
+Out of the 2545 people arrested in Precinct 75, 68% were identified as Black, 18% were identified as White Hispanic, 6% were identified as Black hispanic, 4% were identified as White, 3% were identified as Asian/Pacific Islander, and
+less than 0% were identified as American Indian/Alaskan Native or unknown.
 
 
 #### What is the racial distribution of people who are arrested in the precinct with the lowesr number of arrests?
@@ -280,13 +274,15 @@ race_p22 <- p22 |>
   count(perp_race) |>
   mutate(prop = n / sum(n))
 
-ggplot(race_p22, aes(y = perp_race, x = prop)) +
+ggplot(race_p22, aes(y = fct_reorder(perp_race, prop), x = prop)) +
   geom_col(fill = "darkblue") +
   theme_minimal() +
   labs(title = "Racial distribution of arrests in Precinct 22 (Manhattan)")
 
 ```
-
+There were a total of 19 arrests in Precinct 22. Out of those arrests, 58%
+were people identified as hispanics, 32% were people identified as black,
+and 11% were people identified as white.
 
 
 
