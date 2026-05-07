@@ -3,7 +3,7 @@
 Shrina Dong
 
 ## Introduction
-I chose the Cool It! NYC 2020 - Drinking Fountains dataset because growing up in NYC, I've noticed that the reliability of our public infrastructure systems has become a growing concern for New Yorkers. My interest specifically in water infrastructure began personally: while I was running along the Hudson River on a hot day, I had no water and was exhausted by the heat. I stopped at five consecutive water fountains, only to find every single one of them broken. I realized that what was initially a personal inconvenience posed a much larger public health issue. As climate change accelerates and we continue to see worsening effects, such as increased temperatures, reliable public water access is critical. It is especially important that we ensure that cities with large populations, such as NYC, have strong water infrastructure systems in place to support denser areas. In this project, I will investigate any systematic failures in NYC's water infrastructure, as well as the distribution and accessibility of water fountains across boroughs. 
+I chose the Cool It! NYC 2020 - Drinking Fountains dataset because growing up in NYC, I've noticed that the reliability of our public infrastructure systems has become a growing concern for New Yorkers. My interest specifically in water infrastructure began personally: while I was running along the Hudson River on a hot day, I had no water and was exhausted by the heat. I stopped at five consecutive water fountains, only to find every single one of them broken. I realized that what was initially a personal inconvenience posed a much larger public health issue. As climate change accelerates and we continue to see worsening effects, such as increased temperatures, reliable public water access is critical. It is especially important that we ensure that cities with large populations, such as NYC, have strong water infrastructure systems in place to support denser areas. In this project, I will investigate any systematic failures in NYC's water infrastructure, as well as the distribution and accessibility of water fountains across the boroughs. 
 
 ## Data
 ### Description
@@ -11,10 +11,16 @@ The "Cool It! NYC 2020 - Drinking Fountains" [dataset](https://data.cityofnewyor
 
 ### Missing Value Analysis
 ```{r}
+#| fig-width: 18
+#| fig-height: 10
+#| out-width: "100%"
+#| warning: false
+#| message: false
+
 df <- read.csv("data/coolit.csv", na.strings = "")
 
 library(redav)
-plot_missing(df, num_char = 4, max_cols = 20)
+plot_missing(df, num_char = 3, max_cols = 20)
 ```
 The most common missing-value pattern is the one with the SubPropertyName missing (Pattern 1), with over 40% of the rows containing this pattern and over half of the fountains missing the SubPropertyName. When taken in the context of another similar column, PropertyName, I can conclude that this is likely a structural and purposeful omission. Since PropertyName already provides the primary park/playground that the fountain is located in, there is no need to further specify the SubProperty Name unless the park is large enough to have distinct zones, such as with Ferry Point Park. Thus, this missing pattern is not random or a result of failure in data collection, but is conditional. It gives us a valuable piece of information that is otherwise not provided: the relative size of these park areas. 
 The prevalence of certain missing patterns also reveals a prioritizing process in data collection. Missing Patterns 1-7 are all some combination of the variables SubPropertyName, Painted, and Position, whereas variables like ParkDistrict, DF.Activated, and FountainType rarely have any missing values. When it comes to data collection, factors that define the identity and availability of the fountain are treated as required, whereas qualitative factors are treated as supplementary "nice-to-have" data.
@@ -22,6 +28,12 @@ The prevalence of certain missing patterns also reveals a prioritizing process i
 ## Results
 ### Topic 1: Prevalence of Broken Water Fountains Across Boroughs
 ```{r}
+#| fig-width: 12
+#| fig-height: 5
+#| out-width: "100%"
+#| warning: false
+#| message: false
+
 library(tidyverse)
 library(sf)
 library(patchwork)
@@ -60,7 +72,7 @@ p1 <- ggplot() +
              size = 0.5,          
              alpha = 0.6) +      
   coord_sf() +
-  theme_classic(15) +
+  theme_classic(12) +
   labs(title = "Geographic Concentration of All Water Fountains",
        x = "Longitude",
        y = "Latitude")
@@ -70,7 +82,7 @@ p2 <- ggplot() +
   geom_point(data = broken, aes(x = x, y = y), 
              color = "red", size = 1, alpha = 0.6) +
   coord_sf() +
-  theme_classic(15) +
+  theme_classic(12) +
   labs(title = "Geographic Concentration of Broken Water Fountains",
        x = "Longitude",
        y = "Latitude")
@@ -79,13 +91,19 @@ p1 + p2
 ```
 
 ```{r}
+#| fig-width: 12
+#| fig-height: 5
+#| out-width: "100%"
+#| warning: false
+#| message: false
+
 p3 <- ggplot() +
   geom_sf(data = boroughs, color = "darkgray", fill = "gray", linewidth = 0.7) +
   geom_density_2d_filled(data = cool, 
                          aes(x = x, y = y, fill = after_stat(level)), alpha = 0.5) +
   scale_fill_viridis_d(guide = "none") +
   coord_sf(xlim = c(-74.25, -73.7), ylim = c(40.48, 40.92)) +
-  theme_classic(15) +
+  theme_classic(12) +
   coord_sf() +
   labs(title = "Geographic Concentration of All Water Fountains",
        x = "Longitude",
@@ -98,7 +116,7 @@ p4 <- ggplot() +
                          aes(x = x, y = y, fill = after_stat(level)), alpha = 0.5) +
   scale_fill_viridis_d(guide = "none") +
   coord_sf(xlim = c(-74.25, -73.7), ylim = c(40.48, 40.92)) +
-  theme_classic(15) +
+  theme_classic(12) +
   labs(title = "Geographic Concentration of Broken Water Fountains",
        x = "Longitude",
        y = "Latitude",
@@ -113,6 +131,9 @@ My analysis contains two spatial visualizations: a scatter map, and a filled den
 
 ### Topic 2: Heat Vulnerability vs Density of Fountain Infrastructure Across Boroughs
 ```{r}
+#| warning: false
+#| message: false
+
 library(knitr)
 
 hvi <- read.csv("data/hvi.csv")
@@ -196,6 +217,9 @@ Using the [2020 NYC Heat Vulnerabiltiy Index Dataset](https://a816-dohbesp.nyc.g
 
 ### Topic 3: Fountain Diversity & Accessibilty
 ```{r}
+#| warning: false
+#| message: false
+
 cool_borough <- cool |>
   mutate(Borough = toupper(Borough)) |> 
   mutate(Borough = recode(Borough, 
