@@ -14,6 +14,7 @@ Imports:
     rmarkdown,
     sf,
     tidycensus,
+    tidytext,
     tidyverse,
     tigris
 Remotes: 
