@@ -226,6 +226,8 @@ Across the nine topics, students rated "Diversity, Equity, & Inclusion (DEI)" mo
 
 Another pattern worth noting is that, for the two lowest topics, the within-topic differences are noticeable, ranging from negative percentages of agreeableness to nearly 80-90%, suggesting that students had substantially different understandings across the questions designed to measure "Academic Press" and "Emotional Well-Being". Therefore, let's create two bar charts for these topics to closely examine which questions were the most concerning to NYC students.
 
+#### Question 1.2: examining the question-level intragroup differences for the two lowest rated topics
+
 ```{r}
 # Create the question text
 q_text <- tribble(
