@@ -1,74 +1,230 @@
 # Food Security Data
 Penny
+
+## Introduction
+Explain why you chose this topic, and the questions you are interested in studying. Provide context for readers who are not familiar with the topic.
+
+(suggested length: one paragraph)
+
+## Data
 ```{r}
 library(tidyverse)
 library(sf)
 library(ggridges)
 library(forcats)
+library(redav)
+library(tidycensus)
+library(knitr)
+library(scales)
+
 food <- read.csv("data/Food/Food.csv")
-head(food)
 Neighborhood <- read.csv("data/Food/2020_Neighborhood_Tabulation_Areas_(NTAs)_20260422.csv")
-Neighborhood <- Neighborhood |> 
+
+data <- Neighborhood |> 
   st_as_sf(wkt = "the_geom") |> 
-  rename(geometry = the_geom)
-data <- Neighborhood |> left_join(food,
+  rename(geometry = the_geom) |> 
+  left_join(food,
     by = c("NTA2020" = "Neighborhood.Tabulation.Area.NTA.")) |> 
   mutate(food_insecurity = parse_number(Food.Insecure.Percentage), 
          unemployment_rate = parse_number(Unemployment.Rate), 
-         Year = as.factor(Year)) 
+         Year = as.factor(Year),
+         Supply.Gap..lbs.. = parse_number(Supply.Gap..lbs..),
+         unemployment_rate = case_when(
+      Year %in% c("2023", "2024") ~ unemployment_rate * 100,
+      Year == "2025" ~ floor(unemployment_rate))) |> 
+  select(-c(`BoroCode`, `CountyFIPS`, `CDTA2020`, `NTAAbbrev`, `CDTAName`, 13, `Food.Insecure.Percentage`, `Unemployment.Rate`)) |>
+  relocate(c(`Shape_Length`, `Shape_Area`,`geometry`), .after = last_col())
 
-data |> filter (Year == "2025") |> ggplot() + 
-  geom_sf(aes(fill = food_insecurity)) + 
-  scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0, 40), breaks = seq(0, 40, by = 10)) + 
-  labs(title = "Food Insecurity by Neighborhood, 2025")
-  
-data |> filter (Year == "2024") |> ggplot() + 
-  geom_sf(aes(fill = food_insecurity)) + 
-  scale_fill_distiller(palette = "Reds", direction = 1, limits = c(0, 40), breaks = seq(0, 40, by = 10)) + 
-  labs(title = "Food Insecurity by Neighborhood, 2024")
+pl_2020 <- load_variables(2020, "pl", cache = T)
 
-data |> filter (Year == "2023") |> ggplot() + 
-  geom_sf(aes(fill = food_insecurity)) + 
-  scale_fill_distiller(palette = "Blues", direction = 1, limits = c(0, 40), breaks = seq(0, 40, by = 10)) + 
-  labs(title = "Food Insecurity by Neighborhood, 2023")
+raw_race <- get_decennial(geography = "tract",
+                           variables = c(`Total` = "P1_001N",
+                                         `Hispanic or Latino` = "P2_002N",
+                                         `Black-alone` = "P2_006N",
+                                         `Asian-alone` = "P2_008N",
+                                         `White-alone` = "P2_005N"),
+                           state='NY',
+                          county = c('New York', 'Kings', 'Bronx', 'Richmond',
+                                     'Queens'),
+                           geometry = T,
+                           year = 2020,
+                           output = "wide")
 
-data |> ggplot(aes(x = unemployment_rate, y = food_insecurity)) + geom_point(aes(color = Year))
-data |> filter (Year == "2024" | Year == "2023") |> ggplot(aes(x = unemployment_rate, y = food_insecurity)) + geom_point(aes(color = Year))
-data |> filter (Year == "2025") |> 
-  ggplot(aes(x = unemployment_rate, y = food_insecurity)) + geom_point() + labs(title = "Food Insecurity by Neighborhood, 2025")
+race <- raw_race %>% 
+  mutate(`Hispanic or Latino (%)` = `Hispanic or Latino`/`Total`,
+         `Black-alone (%)` = `Black-alone`/`Total`,
+         `Asian-alone (%)` = `Asian-alone`/`Total`,
+         `White-alone (%)` = `White-alone`/`Total`)
 
-data |> filter (Year == "2025") |> group_by (BoroName) |> 
-  summarize (unemployment_rate_mean = mean(unemployment_rate), 
-             food_insecurity_mean = mean(food_insecurity)) |> 
-  pivot_longer(
-    cols = c(unemployment_rate_mean, food_insecurity_mean),
-    names_to = "indicator",
-    values_to = "percentage") |> 
-  ggplot(aes(x = BoroName, y = percentage, fill = indicator)) + 
-  geom_col(position = "dodge")
+race <- raw_race %>% 
+  mutate(`Hispanic or Latino (%)` = `Hispanic or Latino`/`Total`,
+         `Hispanic or Latino (%)` = ifelse(is.nan(`Hispanic or Latino (%)`),
+                                                NA, `Hispanic or Latino (%)`)) %>%
+  mutate(`Black-alone (%)` = `Black-alone`/`Total`,
+         `Black-alone (%)` = ifelse(is.nan(`Black-alone (%)`),
+                                           NA, `Black-alone (%)`)) %>%
+  mutate(`Asian-alone (%)` = `Asian-alone`/`Total`,
+         `Asian-alone (%)` = ifelse(is.nan(`Asian-alone (%)`),
+                                           NA, `Asian-alone (%)`)) %>% 
+  mutate(`White-alone (%)` = `White-alone`/`Total`,
+         `White-alone (%)` = ifelse(is.nan(`White-alone (%)`),
+                                    NA, `White-alone (%)`))
 
-data |> filter (Year == "2025") |> group_by (BoroName) |> 
-  ggplot(aes(x = food_insecurity, y = reorder(BoroName, food_insecurity, median))) +
-  geom_density_ridges(fill = "blue", alpha = 0.5, scale = 1) +
-  ggtitle("Food Insecurity by Borough") +
-  ylab("Food Insecurity Score")
+data <- st_set_crs(data, 4326)
 
-data |> filter (Year == "2025") |> group_by(BoroName) |>
+race_4326 <-  st_transform(race, 4326)
+
+data_clean <- data |> select(NTAName, BoroName, geometry) |>
+  distinct(NTAName, BoroName, .keep_all = TRUE)
+
+race_nabes <- race_4326 |>
+  st_join(data_clean, 
+          left = TRUE, # left -> defines it as left_join -- meaning all census tract are kept
+          join = st_intersects, # join -> defines the join definition as "if they intersect"
+          largest = TRUE)
+
+race_complete <- race_nabes |>
+  st_drop_geometry()  |> select(-c(GEOID, NAME, BoroName)) |>
+  group_by(NTAName) |> 
+  summarise(Borough = first(BoroName),
+            `Total` = sum(`Total`),
+            `Total Hispanic or Latino` = sum(`Hispanic or Latino`),
+            `Total Black-alone` = sum(`Black-alone`),
+            `Total Asian-alone` = sum(`Asian-alone`),
+            `Total White-alone` = sum(`White-alone`)) %>% 
+  mutate(`Total Hispanic or Latino (%)` = percent(`Total Hispanic or Latino`/`Total`, accuracy = 1L),
+         `Total Black-alone (%)` = percent(`Total Black-alone`/`Total`, accuracy = 1L),
+         `Total Asian-alone (%)` = percent(`Total Asian-alone`/`Total`, accuracy = 1L),
+         `Total White-alone (%)` = percent(`Total White-alone`/`Total`)) %>% 
+  select(Borough, NTAName, Total, `Total Hispanic or Latino (%)`, `Total Black-alone (%)`,
+         `Total Asian-alone (%)`, `Total White-alone (%)`)
+
+data <- data |> left_join(race_complete, by = "NTAName")
+
+head(data)
+```
+### Description
+Describe how the data are collected and by whom. Describe the format of the data, the frequency of updates, dimensions, and any other relevant information. Note any issues / problems with the data, either known or that you discover.  Carefully document your sources with links to the precise data sources that you used. 
+
+(suggested length: one paragraph)
+
+### Missing value analysis
+```{r}
+data |> 
+  rename (SuppGap = Supply.Gap..lbs.., VulnPopu = Vulnerable.Population.Score, WeigScor = Weighted.Score, FoodInsc = food_insecurity, EmplRate = unemployment_rate) |>
+  plot_missing(num_char = 7, max_cols = 8, max_rows = 5)
+data_missing <- data |> mutate(missing_value = is.na(Year))
+data_missing |> ggplot() +
+  geom_sf(aes(fill = missing_value)) +
+  scale_fill_manual(
+    values = c("FALSE" = "#B3B3B3","TRUE" = "#B49BE6")) + 
+   geom_sf_text(data = data_missing |> filter(missing_value == TRUE), aes(label = NTAType), size = 1.5) + 
+  labs(title = "Neighborhoods with Missing Values",
+       x = "Longtitude", 
+       y = "Latitude",
+    fill = "Missing value",
+    subtitle = "NTAType: Unlabeled = Residential; 5 = Rikers Island; 6 = Other Special Areas; 7 = Cemetery; 8 = Airport; 9 = Park")
+```
+Describe any patterns you discover in missing values. If no values are missing, a graph should still be included showing that.
+
+(suggested: 1-2 graphs plus commentary)
+
+## Results
+### Question or topic 1
+```{r}
+data |> filter(Year %in% c("2023", "2024", "2025")) |> 
+  ggplot() + geom_sf(aes(fill = food_insecurity)) +
+  scale_fill_distiller(palette = "Greens", direction = 1,limits = c(0, 40), 
+                       breaks = seq(0, 40, by = 10)) + 
+  facet_wrap(~ Year, nrow = 1) +
+  labs(title = "Food Insecurity Percentage by Neighborhood, 2023-2025", 
+       x = "Longitude",
+       y = "Latitude", 
+       fill = "Food Insecurity Percentage") +
+  theme(legend.position = "bottom")
+
+data_diff <- data |> select(1:5, "Year", "food_insecurity") |> pivot_wider(names_from = Year, values_from = food_insecurity) |>
+  mutate(`2023-2024` = `2024` - `2023`, `2024-2025` = `2025` - `2024`) |>
+  pivot_longer(cols = c(`2023-2024`, `2024-2025`),
+    names_to = "Year_diff",
+    values_to = "food_diff")
+
+data_diff |> ggplot() + geom_sf(aes(fill = `food_diff`)) +
+  scale_fill_gradient2(low = "#2166AC", mid = "white",
+                        high = "#B2182B", midpoint = 0, limits = c(-20, 20)) +
+  facet_wrap(~ Year_diff, nrow = 1) +
+  labs(title = "Change in Food Insecurity Percentage Points by Neighborhood", 
+       x = "Longitude",
+       y = "Latitude", 
+       fill = "Change in % points")
+```
+
+### Question or topic 2
+```{r}
+p1 <- data |> filter (Year == "2025") |> group_by (BoroName) |> 
+  ggplot(aes(x = food_insecurity, y = reorder(BoroName, food_insecurity, median))) + 
+  geom_density_ridges(fill = "blue", alpha = 0.5, scale = 1) + 
+  labs(x = "Food Insecurity Percentage", y = "Borough")
+
+p2 <- data |> filter (Year == "2025") |> group_by(BoroName) |>
   ggplot(aes(x = food_insecurity, y = reorder(BoroName, food_insecurity, median))) +
   geom_boxplot() +
-  ggtitle("Food Insecurity by Borough") +
-  labs(y = "Food Insecurity Score", x = "Borough")
+  xlim(c(0, 40)) + 
+  labs(x = "Food Insecurity Percentage", y = "Borough")
+p1 + p2 + plot_annotation(title = "Food Insecurity by Borough, 2025")
 
-housing <- read.csv("data/Food/Housing_Database_by_2020_NTA_20260504.csv")
-housing <- housing |> select(c(2:23)) 
-data_foodhousing <- data |> left_join(housing,
-    by = c("NTA2020" = "nta2020")) |> mutate(cenunits20 = parse_number(cenunits20))
+data |> ggplot(aes(x = Year, y = food_insecurity, group = NTAName)) +
+  geom_line(alpha = 0.25) +
+  geom_point(alpha = 0.25) +
+  facet_wrap(~ BoroName) +
+  labs(title = "Food Insecurity Trajectories by Borough", x = "Year", y = "Food Insecurity Percentage")
 
-data_foodhousing |> filter (Year == "2025") |> ggplot(aes(x = cenunits20, y = food_insecurity)) + geom_point()
-
-
-library(redav)
-plot_missing(data)
-
+data |>  filter(Year == "2025") |> arrange(desc(food_insecurity)) |>
+  mutate(NTA_Bor = paste0(NTAName, ",", BoroName)) |>
+  slice_head(n = 20) |>
+  ggplot(aes(x = food_insecurity, y = reorder(NTAName, food_insecurity))) +
+  geom_point(color = "blue") +
+  labs(title = "Top 20 Neighborhoods by Food Insecurity, 2025",
+    x = "Food Insecurity Percentage",
+    y = "Neighborhood") 
 
 ```
+
+### Question or topic 3
+```{r}
+data |> ggplot(aes(x = unemployment_rate, y = food_insecurity, color = Year)) +
+  geom_jitter(width = 0.5, height = 0, alpha = 0.3) +
+  geom_smooth(method = "lm",se = FALSE) + 
+  labs(x = "Unemployment Rate",y = "Food Insecurity",color = "Year")
+
+data <- data |> group_by(Year) |>
+  mutate(scaled_vulpop = (Vulnerable.Population.Score-mean(Vulnerable.Population.Score))/sd(Vulnerable.Population.Score)) |>
+  ungroup()
+
+data |> ggplot(aes(x = scaled_vulpop, y = food_insecurity, color = Year)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Food Insecurity and Standardized Vulnerable Population Score",
+    x = "Standardized Z Score for Vulnerable Population Score",
+    y = "Food Insecurity",
+    color = "Year")
+
+data |> filter(!is.na(Year)) |> mutate(food_high = food_insecurity > median(food_insecurity, na.rm = TRUE),
+    unemployment_high = unemployment_rate > median(unemployment_rate, na.rm = TRUE),
+    category = case_when(
+      food_high & unemployment_high ~ "High food insecurity, high unemployment", 
+       food_high & !unemployment_high ~ "High food insecurity, low unemployment",
+      !food_high & unemployment_high ~ "Low food insecurity, high unemployment",
+      !food_high & !unemployment_high ~ "Low food insecurity, low unemployment")) |>
+  ggplot() +
+    facet_wrap(~ Year, nrow = 1)+
+  geom_sf(aes(fill = category)) +
+  labs(title = "Food Insecurity and Unemployment Classification, 2025",
+       x = "Longtitude", 
+       y = "Latitude",
+    fill = "Category") + 
+  theme(legend.position = "bottom")
+```
+
+## Conclusion
+To be determined
