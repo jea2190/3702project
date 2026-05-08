@@ -21,6 +21,7 @@ book:
     - food.qmd
     - coolit.qmd
     - NYC_voting_data.qmd
+    - MTASubwayData.qmd
     - instructions.qmd
 
   
