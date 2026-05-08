@@ -3,14 +3,14 @@
 Makena Fong
 
 ## Introduction
-Recently, I have been highly involved in the process of looking for an apartment and deciding whether it is best to stay in on campus housing or move off campus. Housing in New York City is so expensive, it is typical for people to have roommates or turn living rooms into additional bedrooms. I decided to look at the Affordable Housing data set because I know so many people struggle to afford rent. I wanted to see what assistance the city provides to low income families to help them stay in NYC. I wanted to learn more about the distribution of affordable housing in New York City. Since 2014, there have been 2 different programs to help create more affordable housing. They are the Housing New York plan (1/1/2014-12/31/2021) and the Housing Our Neighbors: A Blueprint for Housing & Homelessness plan (1/1/2022-present). These plans help to improve the quality of housing, support people experiencing homelessness, and increase homeownership opportunities.  
+Recently, I have been highly involved in the process of looking for an apartment and deciding whether it is best to stay in on campus housing or move off campus. Housing in New York City is expensive, so it is typical for people to have roommates or turn living rooms into additional bedrooms, essentially doing anything they can to make it work. I decided to look at the Affordable Housing data set because I know so many people struggle to afford rent. I wanted to see what assistance the city provides to low income families to help them stay in New York City. I wanted to learn more about the distribution of affordable housing in NYC. Since 2014, there have been 2 different programs to help create more affordable housing. They are the Housing New York plan (1/1/2014-12/31/2021) and the Housing Our Neighbors: A Blueprint for Housing & Homelessness plan (1/1/2022-present). These plans help to improve the quality of housing, support people experiencing homelessness, and increase homeownership opportunities.  
 Source: https://www.nyc.gov/site/hpd/about/housing-blueprint.page
 
 ## Data
 ### Description
 This data is collected through various Housing Preservation and Development programs. Each row represents one building in a specific housing development or preservation project. Each column contains details about the location of the building, when construction began, details about the number of units divided by target income level, and the number of bedrooms. This data set is 8,983 rows and 41 columns. It is updated quarterly and was last updated March 20th, 2026. 
 
-Buildings may appear multiple times if they were involved in multiple housing projects, meaning the project counts do not necessarily represent unique buildings. There are also some projects that were started to assist homeowners or special populations that are marked "CONFIDENTIAL" so we don't have all of the data for certain projects. In addition, many projects are still in progress and therefore do not yet have building or project completion dates. Analysis of this data was done by project/building but also by unit so some boroughs may have fewer projects overall but larger average developments. 
+Buildings may appear multiple times if they were involved in multiple housing projects, meaning the project counts do not necessarily represent unique buildings. There are also some projects that were started to assist homeowners or special populations that are marked "CONFIDENTIAL" so we don't have all of the data for certain projects. In addition, many projects are still in progress and therefore do not yet have building or project completion dates. Analysis of this data was sometimes done by project but also sometimes by unit so some boroughs may have fewer projects overall but larger average developments. 
 
 ### Missing Value Analysis
 
@@ -24,25 +24,41 @@ df <- read_csv("data/affordablehousing.csv")
 library(redav)
 plot_missing(df, num_char = 4, max_cols = 13, max_rows = 5) 
 ```
-From this graph, we can see that a majority of the columns with missing data contain no information about the location of the project, but do have a date project and building completion date. This helps to verify the statement in the introduction of the data set that there are projects labeled as "CONFIDENTIAL" where details about the location of the building and any other details that could be traced back to the project itself are hidden. The next row with the most missing data is those with information about the location but no project and building completion date, which again makes sense as projects started more recently are not complete yet. 
+From this graph, we can see that a majority of the columns with missing data contain no information about the location of the project, but do have a project and building completion date. This helps to verify the statement in the introduction that the data set contains projects labeled "CONFIDENTIAL" where details about the exact location of the building and any other details that could be traced back to the project itself are hidden. The next row with the most missing data is those with information about the location but no project and building completion date, which again makes sense as projects started more recently are not complete yet. 
+
+```{r}
+contingency_df <- df |>
+  mutate(
+    Category = case_when(
+      is.na(`Building ID`) & `Project Name` == "CONFIDENTIAL" ~ "Missing & Confidential",
+      !is.na(`Building ID`) & `Project Name` == "CONFIDENTIAL" ~ "Not Missing & Confidential",
+      is.na(`Building ID`) & `Project Name` != "CONFIDENTIAL" ~ "Missing & Not Confidential",
+      !is.na(`Building ID`) & `Project Name` != "CONFIDENTIAL" ~ "Not Missing & Not Confidential"
+    )
+  ) |>
+  count(Category)
+
+ggplot(contingency_df, aes(x = Category, y = n)) +
+  geom_col() +
+  labs(
+    title = "Contingency of Confidential Status and Missing Building IDs",
+    x = "Category",
+    y = "Number of Projects"
+  ) +
+  theme_minimal()
+```
+After filtering the data into projects that are both missing building ID and confidential, contains building ID but not confidential, confidential but missing building ID, and contains building ID and not confidential, we can see that all rows missing a building ID have been labeled "CONFIDENTIAL".
+
 ```{r}
 missing <- df |> 
   filter(is.na(`Building ID`)) |> 
   rename(`Rental Units` = `Counted Rental Units`, `Homeownership Units` = `Counted Homeownership Units`)|> 
-  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Missing Counted Units") |> 
-  aggregate(`Missing Counted Units` ~ Type, FUN = sum)
+  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Counted Units") |> 
+  aggregate(`Counted Units` ~ Type, FUN = sum)
 ```
 
 ```{r}
-confidential <- df |> 
-    filter(`Project Name` == "CONFIDENTIAL") |> 
-  rename(`Rental Units` = `Counted Rental Units`, `Homeownership Units` = `Counted Homeownership Units`)|> 
-  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Confidential Counted Units") |> 
-  aggregate(`Confidential Counted Units` ~ Type, FUN = sum)
-
-con_mis <- left_join(confidential, missing) |> pivot_longer(cols = c(`Missing Counted Units`, `Confidential Counted Units`), names_to = "Missing vs. Confidential", values_to = "Counted Units")
-
-ggplot(con_mis, aes(x = Type, y = `Counted Units`, fill = `Missing vs. Confidential`)) + 
+ggplot(missing, aes(x = Type, y = `Counted Units`)) + 
   geom_col(position = "dodge") + 
   labs(
     title = "Number of Units with Missing Data by Unit Type",
@@ -51,7 +67,7 @@ ggplot(con_mis, aes(x = Type, y = `Counted Units`, fill = `Missing vs. Confident
   )
 
 ```
-From this graph we can see that a majority of the projects with missing data are projects that involve homeownership units. This also helps us to verify the statement provided in the data set introduction that some information was redacted because it was related to homeownership. We can also confirm that all units with no building ID are confidential projects and not a lack of data upkeep. 
+From this graph we can see that a majority of the projects with missing data are projects that involve homeownership units. This also helps us to verify the statement provided in the data set introduction that some information was redacted because it was related to homeownership. 
 ```{r}
 missing_rental <- df |> 
   filter(is.na(`Building ID`),`Counted Rental Units` > 0 ) |> 
@@ -67,7 +83,7 @@ ggplot(missing_rental, aes(y = fct_reorder(Income, `Counted Units`), x = `Counte
     x = "Number of Units"
   )
 ```
-From this graph we can see that most of the rental units with missing data are "Extremely Low Income Units". In the data set introduction we know that some information was considered confidential because it was related to a "special population". This suggests that projects involving extremely low income units may be more likely to be associated with confidential or protected populations. 
+From this graph we can see that most of the rental units with missing data are "Extremely Low Income Units". In the data set introduction, we were told that some information was considered confidential because it was related to a "special population". This suggests that projects involving extremely low income units may be more likely to be associated with confidential or special populations. 
 
 ```{r}
 unfinished <- df |> 
@@ -117,7 +133,7 @@ ggplot() +
 )
 
 ```
-We can see there is a high concentration of affordable housing projects in the Bronx. Not too many in Lower Manhattan on the west side or by FIDI, with a higher concentration in the East Village/Stuyvesant Town area. Projects are more spread out in Queens and there are very few projects in Staten Island. Additionally there is a large concentration of projects in the North-Eastern part of Brooklyn which may reflect the high residential density of that area. 
+We can see there is a high concentration of affordable housing projects in the Bronx, Upper Manhattan and the northeastern part of Brooklyn. There are much fewer projects in Lower Manhattan in the West Village and FIDI area. There is a higher concentration in the East Village/Stuyvesant Town area. Projects are more spread out in Queens and there are very few projects in Staten Island.
 Borough Shape File Source: https://www.nyc.gov/content/planning/pages/resources/datasets/borough-boundaries
 
 ```{r}
@@ -152,7 +168,7 @@ ggplot(gap_plot, aes(x = fct_reorder(Borough, gap, .desc = TRUE), y = gap)) +
     x = "Borough"
   )
 ```
-From this graph, we can see that the Bronx and Brooklyn have a higher share of the affordable projects in comparison to their share of the total population. According to the NYC True Cost of Living report, 75% of residents in the Bronx do not meet their true cost of living. Approximately 65% of Brooklyn and Queens residents don't meet their true cost of living and 55% and 48% for Manhattan and Staten Island respectively. This would explain why the Bronx and Brooklyn have a higher share of affordable housing projects in comparison to their share of population since more residents don't meet their true cost of living. Queens seems to have a large share of the population but not a very large share of the affordable housing projects considering a similar proportion of residents to Brooklyn don't meet the true cost of living. It could be that since the second plan is still in progress, that the city will be turning to Queens to start more projects. 
+From this graph, we can see that the Bronx and Brooklyn have a higher share of the affordable projects in comparison to their share of the total population. According to the NYC True Cost of Living report, 75% of residents in the Bronx do not meet their true cost of living. Approximately 65% of Brooklyn and Queens residents don't meet their true cost of living and 55% and 48% for Manhattan and Staten Island respectively. This would explain why the Bronx and Brooklyn have a higher share of affordable housing projects in comparison to their share of population since more residents are demonstrating the need for support. Queens seems to have a large share of the population but not a very large share of the affordable housing projects considering there is similar proportion of residents to Brooklyn who don't meet the true cost of living. It could be that since the second plan is still in progress, that the city will be turning to Queens to start more projects. 
 
 Source: https://www.nyc.gov/assets/equity/downloads/pdf/2026%20NYC%20TCOL%20Measure_4%206%2026.pdf#:~:text=Geographic%20Disparities%20Across%20the%20Five,but%20also%20the%20least%20resources.
 
@@ -195,7 +211,7 @@ ggplot() +
     axis.title = element_blank()
   )
 ```
-We can see on the graph that there are generally more Low Income Units and Middle Income units. All levels of income have concentrations of projects in the Bronx and also in Northeast Brooklyn. This tells us that the location of each project was less determined by the target income level and rather by neighborhood and providing access to affordable housing for all of the different income levels. 
+We can see on the graph that there are generally more Low Income Units and Middle Income units. All levels of income have concentrations of projects in the Bronx and also in northeast Brooklyn. This tells us that the location of each project was less determined by the target income level and rather by neighborhood and providing access to affordable housing for all of the different income levels. 
 
 One issue I did run into while creating this graph was that each project had units for multiple income levels. To create this graph, I decided to figure out what income level the majority of the units in the building were for and use that income level as the target income level associated with the building. This simplification allowed each project to be assigned a single primary income category, although many projects serve multiple income groups. Then I was able to create this graph. 
 
