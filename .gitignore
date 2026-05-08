@@ -14,3 +14,5 @@ _book/
 data/citibike
 *.html
 3702project
+.Rapp.history
+nypdarrests.rmarkdown
