@@ -72,7 +72,7 @@ plot_missing(
 Only left variables with meaningful missigness.
 
 #### Geographical Missingness
-```{r}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
@@ -446,7 +446,7 @@ City Limits – Which Is the Bluest Borough?
 Guiding Question: How does voter turnout in the Assembly districts around Columbia University's Morningside campus compare to turnout in areas surrouding other NYC college campuses, and what does this suggest about the interaction between civic participation and school demographic makeup?
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
@@ -547,7 +547,7 @@ ggplot() +
 ```
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
